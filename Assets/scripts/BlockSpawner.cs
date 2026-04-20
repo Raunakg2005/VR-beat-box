@@ -1,43 +1,75 @@
+using System.Collections;
 using UnityEngine;
 
 public class BlockSpawner : MonoBehaviour
 {
-    // These create empty slots in Unity where we will drag our Prefabs
     public GameObject redPrefab;
     public GameObject bluePrefab;
     
-    // How many seconds between each spawn
+    [Header("Spawn Timing")]
     public float spawnInterval = 1.5f; 
-    private float timer;
+    public float minSpawnInterval = 0.5f; // The fastest it can possibly spawn
+    public float speedIncreaseRate = 0.05f; // How much the interval shrinks each time
 
-    void Update()
+    // --- NEW: Area Limits for Spawning ---
+    // You can change these numbers right inside the Unity Inspector!
+    [Header("Spawn Limits")]
+    public float lowestY = 0.8f;  // About waist height
+    public float highestY = 2.2f; // Just above head height
+    public float closestX = 0.2f; // Near the center of your chest
+    public float furthestX = 1.2f; // Far out to your sides
+
+    void Start()
     {
-        // This acts as a stopwatch counting up
-        timer += Time.deltaTime;
+        // Start the Coroutine when the spawner activates
+        StartCoroutine(SpawnRoutine());
+    }
 
-        // When the stopwatch hits our interval, spawn a block and reset!
-        if (timer >= spawnInterval)
+    IEnumerator SpawnRoutine()
+    {
+        // Infinite loop to keep spawning while the game runs
+        while (true)
         {
+            // Wait for the current interval time
+            yield return new WaitForSeconds(spawnInterval);
+            
             SpawnBlock();
-            timer = 0f;
+
+            // Slowly decrease the wait time to spawn faster
+            if (spawnInterval > minSpawnInterval)
+            {
+                spawnInterval -= speedIncreaseRate;
+            }
         }
     }
 
     void SpawnBlock()
     {
-        // Flip a coin: 0 for Red, 1 for Blue
         int randomCube = Random.Range(0, 2);
 
-        if (randomCube == 0)
+        // 1. Pick a completely random height between our lowest and highest limits
+        float randomHeight = Random.Range(lowestY, highestY);
+        
+        // 2. Pick a completely random side distance between our closest and furthest limits
+        float randomWidth = Random.Range(closestX, furthestX);
+
+        if (randomCube == 0) // RED BLOCK
         {
-            // Spawn Red shifted 0.5 meters to the LEFT
-            Vector3 spawnPos = new Vector3(transform.position.x - 0.5f, transform.position.y, transform.position.z);
+            // 3. Randomly choose whether it spawns on Left or Right (50/50 crossover chance)
+            bool spawnOnLeft = Random.value > 0.5f;
+            float sideOffset = spawnOnLeft ? -randomWidth : randomWidth;
+
+            // Apply the offset (either negative or positive)
+            Vector3 spawnPos = new Vector3(transform.position.x + sideOffset, randomHeight, transform.position.z);
             Instantiate(redPrefab, spawnPos, transform.rotation);
         }
-        else
+        else // BLUE BLOCK
         {
-            // Spawn Blue shifted 0.5 meters to the RIGHT
-            Vector3 spawnPos = new Vector3(transform.position.x + 0.5f, transform.position.y, transform.position.z);
+            // Do the same for the Blue block
+            bool spawnOnLeft = Random.value > 0.5f;
+            float sideOffset = spawnOnLeft ? -randomWidth : randomWidth;
+
+            Vector3 spawnPos = new Vector3(transform.position.x + sideOffset, randomHeight, transform.position.z);
             Instantiate(bluePrefab, spawnPos, transform.rotation);
         }
     }
